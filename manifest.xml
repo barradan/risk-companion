@@ -1,0 +1,54 @@
+# Risk Companion (v1)
+
+A reactive Outlook reading-pane add-in that flags four risk-management prompts as you read incoming mail: payment or bank-detail changes, dates and deadlines, court documents, and settlement offers. It shows reminders only. It takes no action, and no email content leaves your device, because all detection runs as plain rules in the pane.
+
+This is a first proof, deliberately small.
+
+## What's in here
+
+- `manifest.xml` — the add-in manifest you sideload into Outlook.
+- `taskpane.html` / `taskpane.css` / `taskpane.js` — the pane itself.
+- `detectors.js` — the detection engine. This is where you tune the rules.
+- `simulator.html` — a standalone page to test the rules in any browser, no Outlook needed.
+- `assets/` — placeholder icons. Swap these for your own any time.
+
+## Test the rules right now, no setup
+
+Open `simulator.html` in any browser. Paste an email, or click one of the example chips, and you will see which prompts fire. It runs the exact same `detectors.js` used by the pane, so anything you change there shows up here straight away. Use this to tune before you bother with Outlook.
+
+## Put it in Outlook
+
+The files must be served over HTTPS. The simplest free option is GitHub Pages.
+
+1. Create a new GitHub repository and upload everything in this folder (keep the `assets` folder intact).
+2. In the repo, go to Settings, then Pages, and turn it on for the main branch. GitHub gives you a URL like `https://yourname.github.io/risk-companion`.
+3. Open `manifest.xml` and replace every `BASE_URL` with that address, with no trailing slash.
+4. Generate a GUID (search "online GUID generator") and paste it into the `<Id>` element, replacing the zeros.
+5. Commit the change.
+
+Then sideload the manifest:
+
+**Outlook on the web**: open Outlook, click the three dots on any open email, choose Get Add-ins, then My add-ins, then under Custom Add-ins choose Add a custom add-in, then Add from file, and pick your `manifest.xml`.
+
+**New Outlook for Windows / classic Outlook**: same Get Add-ins entry point from the ribbon or the email's More actions menu, then My add-ins, Add a custom add-in, Add from file.
+
+Open any received email, click the Risk prompts button, and pin the pane (the pin icon at the top of the pane) so it stays open as you move between messages.
+
+## Try it on real mail
+
+Send yourself a few test emails that look like each trigger, or use the examples in the simulator as a guide. The pane refreshes as you switch messages once it is pinned.
+
+## Tuning
+
+All the logic is in `detectors.js`, with one function per trigger and the keyword lists right there to edit. Two things worth setting early:
+
+- `COURT_SENDER_DOMAINS` near the top. Confirm the real registry email domains for your jurisdiction and add them.
+- The keyword lists in each detector. Loosen or tighten them, then re-check in the simulator.
+
+## Notes and limits
+
+- This is reminders only. There are no one-click actions yet, including add-to-calendar.
+- The pane reads one email at a time and has no memory of the matter, so prompts are framed as things to consider, not findings.
+- It auto-refreshes between messages using the item-changed event, which can occasionally miss a switch within the same conversation thread, so it is not a sole safety net.
+- Requires a Microsoft 365 plan with Exchange Online (for example Business Standard). The cut-down "Apps for Business" plan will not work.
+- These prompts are not legal advice.

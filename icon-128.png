@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Risk Companion — Rules Simulator</title>
+  <link rel="stylesheet" href="taskpane.css" />
+  <style>
+    body { background: #f5f4f2; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 24px 18px 60px; }
+    .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 680px) { .panel { grid-template-columns: 1fr; } }
+    .col { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 10px 0 4px; }
+    input, textarea {
+      width: 100%; font-family: inherit; font-size: 13px; padding: 7px 9px;
+      border: 1px solid var(--line); border-radius: 5px; resize: vertical;
+    }
+    textarea { min-height: 150px; }
+    .run {
+      margin-top: 14px; background: var(--navy); color: #fff; border: none;
+      border-radius: 6px; padding: 9px 16px; font-size: 14px; cursor: pointer;
+    }
+    .title-row h1 { font-size: 18px; margin: 0 0 4px; }
+    .title-row p { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+    .results-head { font-size: 13px; font-weight: 600; margin: 0 0 10px; color: var(--ink); }
+    .examples { margin-top: 12px; font-size: 12px; }
+    .examples button {
+      background: #eef0f3; border: 1px solid var(--line); border-radius: 14px;
+      padding: 4px 10px; margin: 0 6px 6px 0; font-size: 12px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title-row">
+      <h1>Risk Companion — rules simulator</h1>
+      <p>Paste an email and see which prompts the v1 engine would raise. This uses the exact same detection code as the Outlook pane, so anything you tune in detectors.js shows up here.</p>
+    </div>
+
+    <div class="panel">
+      <div class="col">
+        <label for="subject">Subject</label>
+        <input id="subject" type="text" />
+        <label for="from">From (email address)</label>
+        <input id="from" type="text" placeholder="someone@example.com" />
+        <label for="attach">Attachment names (comma separated)</label>
+        <input id="attach" type="text" placeholder="Sealed Order.pdf, Affidavit.docx" />
+        <label for="body">Body</label>
+        <textarea id="body"></textarea>
+        <button class="run" type="button" id="run">Check this email</button>
+        <div class="examples">
+          <div style="margin-bottom:6px;color:var(--muted);">Load an example:</div>
+          <button type="button" data-ex="payment">Bank detail change</button>
+          <button type="button" data-ex="dates">Deadline</button>
+          <button type="button" data-ex="court">Court document</button>
+          <button type="button" data-ex="settle">Settlement offer</button>
+          <button type="button" data-ex="clean">Ordinary email</button>
+        </div>
+      </div>
+
+      <div class="col">
+        <p class="results-head">Prompts raised</p>
+        <div id="cards"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="detectors.js"></script>
+  <script>
+    var EX = {
+      payment: { subject: "Updated remittance details", from: "accounts@supplier.com.au", attach: "", body: "Hi, please note our bank account details have changed. New BSB 085-123 and account number 1234 5678. Kindly pay the outstanding invoice to the updated account." },
+      dates: { subject: "Directions", from: "registry@example.com", attach: "", body: "The matter has been listed for a directions hearing on 14/07/2026. Your client must file and serve any amended pleadings within 21 days." },
+      court: { subject: "Sealed orders", from: "noreply@courts.sa.gov.au", attach: "Sealed Order.pdf", body: "Please find attached the sealed order made by the Court today." },
+      settle: { subject: "Resolution", from: "lawyer@otherfirm.com.au", attach: "", body: "Without prejudice. Our client is prepared to offer the sum of $40,000 in full and final settlement of all claims." },
+      clean: { subject: "Coffee next week?", from: "colleague@example.com", attach: "", body: "Are you free for a coffee next Tuesday to catch up on the file generally? No rush." }
+    };
+
+    function loadEx(k) {
+      var e = EX[k];
+      document.getElementById("subject").value = e.subject;
+      document.getElementById("from").value = e.from;
+      document.getElementById("attach").value = e.attach;
+      document.getElementById("body").value = e.body;
+    }
+
+    function run() {
+      var ctx = {
+        subject: document.getElementById("subject").value,
+        fromEmail: document.getElementById("from").value,
+        attachments: document.getElementById("attach").value.split(",").map(function (s) { return s.trim(); }).filter(Boolean),
+        body: document.getElementById("body").value
+      };
+      var findings = window.RiskDetectors.runDetectors(ctx);
+      var box = document.getElementById("cards");
+      box.innerHTML = "";
+      if (!findings.length) {
+        box.innerHTML = '<p class="empty">No risk prompts for this email.</p>';
+        return;
+      }
+      findings.forEach(function (f) {
+        var c = document.createElement("div");
+        c.className = "card " + f.severity;
+        c.innerHTML = '<div class="card-top"><h2></h2><span class="ref"></span></div><p></p>' +
+          (f.evidence ? '<span class="evidence"></span>' : '');
+        c.querySelector("h2").textContent = f.title;
+        c.querySelector(".ref").textContent = f.ref;
+        c.querySelector("p").textContent = f.body;
+        if (f.evidence) c.querySelector(".evidence").textContent = "Matched: " + f.evidence;
+        box.appendChild(c);
+      });
+    }
+
+    document.getElementById("run").addEventListener("click", run);
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ex]"), function (b) {
+      b.addEventListener("click", function () { loadEx(b.getAttribute("data-ex")); run(); });
+    });
+    loadEx("payment");
+    run();
+  </script>
+</body>
+</html>

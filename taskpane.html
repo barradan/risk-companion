@@ -1,0 +1,105 @@
+/* Risk Companion — task pane controller */
+(function () {
+  "use strict";
+
+  var dismissed = {};
+
+  Office.onReady(function (info) {
+    if (info.host === Office.HostType.Outlook) {
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("app").classList.remove("hidden");
+      registerItemChanged();
+      analyseCurrent();
+    }
+  });
+
+  function registerItemChanged() {
+    try {
+      Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, function () {
+        dismissed = {};
+        analyseCurrent();
+      });
+    } catch (e) {
+      // Older hosts without ItemChanged still work, just without auto-refresh.
+    }
+  }
+
+  function analyseCurrent() {
+    var item = Office.context.mailbox.item;
+    if (!item) { render([]); return; }
+
+    var ctx = {
+      subject: item.subject || "",
+      fromEmail: (item.from && item.from.emailAddress) ||
+                 (item.sender && item.sender.emailAddress) || "",
+      attachments: (item.attachments || []).map(function (a) { return a.name || ""; }),
+      body: ""
+    };
+
+    if (item.body && item.body.getAsync) {
+      item.body.getAsync(Office.CoercionType.Text, function (res) {
+        ctx.body = (res.status === Office.AsyncResultStatus.Succeeded && res.value) ? res.value : "";
+        render(window.RiskDetectors.runDetectors(ctx));
+      });
+    } else {
+      render(window.RiskDetectors.runDetectors(ctx));
+    }
+  }
+
+  function render(findings) {
+    var box = document.getElementById("cards");
+    box.innerHTML = "";
+
+    var visible = findings.filter(function (f) { return !dismissed[f.id]; });
+
+    if (visible.length === 0) {
+      var p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = findings.length === 0
+        ? "No risk prompts for this email."
+        : "All prompts dismissed for this email.";
+      box.appendChild(p);
+      return;
+    }
+
+    visible.forEach(function (f) {
+      var card = document.createElement("div");
+      card.className = "card " + f.severity;
+
+      var top = document.createElement("div");
+      top.className = "card-top";
+      var h = document.createElement("h2");
+      h.textContent = f.title;
+      var ref = document.createElement("span");
+      ref.className = "ref";
+      ref.textContent = f.ref;
+      top.appendChild(h);
+      top.appendChild(ref);
+      card.appendChild(top);
+
+      var body = document.createElement("p");
+      body.textContent = f.body;
+      card.appendChild(body);
+
+      if (f.evidence) {
+        var ev = document.createElement("span");
+        ev.className = "evidence";
+        ev.textContent = "Matched: " + f.evidence;
+        card.appendChild(ev);
+        card.appendChild(document.createElement("br"));
+      }
+
+      var btn = document.createElement("button");
+      btn.className = "dismiss";
+      btn.type = "button";
+      btn.textContent = "Done, dismiss";
+      btn.addEventListener("click", function () {
+        dismissed[f.id] = true;
+        render(findings);
+      });
+      card.appendChild(btn);
+
+      box.appendChild(card);
+    });
+  }
+})();
