@@ -1,54 +1,108 @@
-# Risk Companion (v1)
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Risk Companion manifest (v1).
+  Replace every occurrence of BASE_URL with the HTTPS address where you host
+  these files, with no trailing slash. Example: https://yourname.github.io/risk-companion
+  Then generate a fresh GUID and paste it into the <Id> element below.
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+  xsi:type="MailApp">
 
-A reactive Outlook reading-pane add-in that flags four risk-management prompts as you read incoming mail: payment or bank-detail changes, dates and deadlines, court documents, and settlement offers. It shows reminders only. It takes no action, and no email content leaves your device, because all detection runs as plain rules in the pane.
+  <Id>e705224b-683c-40c6-85ea-1dd3c6bbf282</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Risk Companion</ProviderName>
+  <DefaultLocale>en-AU</DefaultLocale>
+  <DisplayName DefaultValue="Risk Companion" />
+  <Description DefaultValue="Flags risk-management prompts as you read incoming mail." />
+  <IconUrl DefaultValue="BASE_URL/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="BASE_URL/assets/icon-128.png" />
+  <SupportUrl DefaultValue="BASE_URL/" />
 
-This is a first proof, deliberately small.
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
 
-## What's in here
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.5" />
+    </Sets>
+  </Requirements>
 
-- `manifest.xml` — the add-in manifest you sideload into Outlook.
-- `taskpane.html` / `taskpane.css` / `taskpane.js` — the pane itself.
-- `detectors.js` — the detection engine. This is where you tune the rules.
-- `simulator.html` — a standalone page to test the rules in any browser, no Outlook needed.
-- `assets/` — placeholder icons. Swap these for your own any time.
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="BASE_URL/taskpane.html" />
+        <RequestedHeight>280</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
 
-## Test the rules right now, no setup
+  <Permissions>ReadItem</Permissions>
 
-Open `simulator.html` in any browser. Paste an email, or click one of the example chips, and you will see which prompts fire. It runs the exact same `detectors.js` used by the pane, so anything you change there shows up here straight away. Use this to tune before you bother with Outlook.
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+  </Rule>
 
-## Put it in Outlook
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
 
-The files must be served over HTTPS. The simplest free option is GitHub Pages.
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.5">
+        <bt:Set Name="Mailbox" />
+      </bt:Sets>
+    </Requirements>
 
-1. Create a new GitHub repository and upload everything in this folder (keep the `assets` folder intact).
-2. In the repo, go to Settings, then Pages, and turn it on for the main branch. GitHub gives you a URL like `https://yourname.github.io/risk-companion`.
-3. Open `manifest.xml` and replace every `BASE_URL` with that address, with no trailing slash.
-4. Generate a GUID (search "online GUID generator") and paste it into the `<Id>` element, replacing the zeros.
-5. Commit the change.
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <FunctionFile resid="taskpaneUrl" />
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="rcGroup">
+                <Label resid="grpLabel" />
+                <Control xsi:type="Button" id="rcOpenButton">
+                  <Label resid="btnLabel" />
+                  <Supertip>
+                    <Title resid="btnLabel" />
+                    <Description resid="btnTip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16" />
+                    <bt:Image size="32" resid="icon32" />
+                    <bt:Image size="80" resid="icon80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="taskpaneUrl" />
+                    <SupportsPinning>true</SupportsPinning>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
 
-Then sideload the manifest:
-
-**Outlook on the web**: open Outlook, click the three dots on any open email, choose Get Add-ins, then My add-ins, then under Custom Add-ins choose Add a custom add-in, then Add from file, and pick your `manifest.xml`.
-
-**New Outlook for Windows / classic Outlook**: same Get Add-ins entry point from the ribbon or the email's More actions menu, then My add-ins, Add a custom add-in, Add from file.
-
-Open any received email, click the Risk prompts button, and pin the pane (the pin icon at the top of the pane) so it stays open as you move between messages.
-
-## Try it on real mail
-
-Send yourself a few test emails that look like each trigger, or use the examples in the simulator as a guide. The pane refreshes as you switch messages once it is pinned.
-
-## Tuning
-
-All the logic is in `detectors.js`, with one function per trigger and the keyword lists right there to edit. Two things worth setting early:
-
-- `COURT_SENDER_DOMAINS` near the top. Confirm the real registry email domains for your jurisdiction and add them.
-- The keyword lists in each detector. Loosen or tighten them, then re-check in the simulator.
-
-## Notes and limits
-
-- This is reminders only. There are no one-click actions yet, including add-to-calendar.
-- The pane reads one email at a time and has no memory of the matter, so prompts are framed as things to consider, not findings.
-- It auto-refreshes between messages using the item-changed event, which can occasionally miss a switch within the same conversation thread, so it is not a sole safety net.
-- Requires a Microsoft 365 plan with Exchange Online (for example Business Standard). The cut-down "Apps for Business" plan will not work.
-- These prompts are not legal advice.
+    <Resources>
+      <bt:Images>
+        <bt:Image id="icon16" DefaultValue="BASE_URL/assets/icon-16.png" />
+        <bt:Image id="icon32" DefaultValue="BASE_URL/assets/icon-32.png" />
+        <bt:Image id="icon80" DefaultValue="BASE_URL/assets/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="taskpaneUrl" DefaultValue="BASE_URL/taskpane.html" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="grpLabel" DefaultValue="Risk Companion" />
+        <bt:String id="btnLabel" DefaultValue="Risk prompts" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="btnTip" DefaultValue="Show risk-management prompts for this email." />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
