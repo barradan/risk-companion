@@ -18,9 +18,9 @@
   <DefaultLocale>en-AU</DefaultLocale>
   <DisplayName DefaultValue="Risk Companion" />
   <Description DefaultValue="Flags risk-management prompts as you read incoming mail." />
-  <IconUrl DefaultValue="BASE_URL/assets/icon-32.png" />
-  <HighResolutionIconUrl DefaultValue="BASE_URL/assets/icon-128.png" />
-  <SupportUrl DefaultValue="BASE_URL/" />
+  <IconUrl DefaultValue="https://github.com/barradan/risk-companion/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://github.com/barradan/risk-companion/assets/icon-128.png" />
+  <SupportUrl DefaultValue="https://github.com/barradan/risk-companion/" />
 
   <Hosts>
     <Host Name="Mailbox" />
@@ -35,7 +35,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="BASE_URL/taskpane.html" />
+        <SourceLocation DefaultValue="https://github.com/barradan/risk-companion/taskpane.html" />
         <RequestedHeight>280</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -89,12 +89,12 @@
 
     <Resources>
       <bt:Images>
-        <bt:Image id="icon16" DefaultValue="BASE_URL/assets/icon-16.png" />
-        <bt:Image id="icon32" DefaultValue="BASE_URL/assets/icon-32.png" />
-        <bt:Image id="icon80" DefaultValue="BASE_URL/assets/icon-80.png" />
+        <bt:Image id="icon16" DefaultValue="https://github.com/barradan/risk-companion/assets/icon-16.png" />
+        <bt:Image id="icon32" DefaultValue="https://github.com/barradan/risk-companion/assets/icon-32.png" />
+        <bt:Image id="icon80" DefaultValue="https://github.com/barradan/risk-companion/assets/icon-80.png" />
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="taskpaneUrl" DefaultValue="BASE_URL/taskpane.html" />
+        <bt:Url id="taskpaneUrl" DefaultValue="https://github.com/barradan/risk-companion/taskpane.html" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="grpLabel" DefaultValue="Risk Companion" />
