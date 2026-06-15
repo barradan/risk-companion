@@ -1,131 +1,120 @@
-:root {
-  --navy: #1f3864;
-  --ink: #1b1b1b;
-  --muted: #605e5c;
-  --line: #e3e1df;
-  --bg: #ffffff;
-  --high: #a4262c;
-  --high-bg: #fdf3f4;
-  --med: #8a6d00;
-  --med-bg: #fdf8e7;
-  --low: #1f4e78;
-  --low-bg: #eef4fb;
-}
+/* Risk Companion — task pane controller */
+(function () {
+  "use strict";
 
-* { box-sizing: border-box; }
+  var dismissed = {};
 
-body {
-  margin: 0;
-  font-family: "Segoe UI", -apple-system, "Helvetica Neue", sans-serif;
-  color: var(--ink);
-  background: var(--bg);
-  font-size: 14px;
-  line-height: 1.45;
-}
+  function init() {
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    registerItemChanged();
+    analyseCurrent();
+  }
 
-.hidden { display: none; }
+  // Support both old (initialize) and new (onReady) Office.js init patterns.
+  // New Outlook can return null or unexpected host values so we skip the host
+  // check and just initialise as long as Office is available.
+  if (Office.onReady) {
+    Office.onReady(function () {
+      init();
+    });
+  } else {
+    Office.initialize = function () {
+      init();
+    };
+  }
 
-#app { padding: 14px 14px 22px; }
+  function registerItemChanged() {
+    try {
+      Office.context.mailbox.addHandlerAsync(
+        Office.EventType.ItemChanged,
+        function () {
+          dismissed = {};
+          analyseCurrent();
+        }
+      );
+    } catch (e) {
+      // Hosts without ItemChanged support still work, just without auto-refresh.
+    }
+  }
 
-.head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
-}
+  function analyseCurrent() {
+    var item = Office.context.mailbox.item;
+    if (!item) { render([]); return; }
 
-.head h1 {
-  font-size: 15px;
-  font-weight: 600;
-  margin: 0;
-}
+    var ctx = {
+      subject: item.subject || "",
+      fromEmail: (item.from && item.from.emailAddress) ||
+                 (item.sender && item.sender.emailAddress) || "",
+      attachments: (item.attachments || []).map(function (a) { return a.name || ""; }),
+      body: ""
+    };
 
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--navy);
-  flex: none;
-}
+    if (item.body && item.body.getAsync) {
+      item.body.getAsync(Office.CoercionType.Text, function (res) {
+        ctx.body = (res.status === Office.AsyncResultStatus.Succeeded && res.value)
+          ? res.value : "";
+        render(window.RiskDetectors.runDetectors(ctx));
+      });
+    } else {
+      render(window.RiskDetectors.runDetectors(ctx));
+    }
+  }
 
-.sub {
-  margin: 0 0 12px;
-  color: var(--muted);
-  font-size: 12px;
-}
+  function render(findings) {
+    var box = document.getElementById("cards");
+    box.innerHTML = "";
 
-.card {
-  border: 1px solid var(--line);
-  border-left-width: 4px;
-  border-radius: 6px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  background: #fff;
-}
+    var visible = findings.filter(function (f) { return !dismissed[f.id]; });
 
-.card.high { border-left-color: var(--high); background: var(--high-bg); }
-.card.medium { border-left-color: var(--med); background: var(--med-bg); }
-.card.low { border-left-color: var(--low); background: var(--low-bg); }
+    if (visible.length === 0) {
+      var p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = findings.length === 0
+        ? "No risk prompts for this email."
+        : "All prompts dismissed for this email.";
+      box.appendChild(p);
+      return;
+    }
 
-.card-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
+    visible.forEach(function (f) {
+      var card = document.createElement("div");
+      card.className = "card " + f.severity;
 
-.card h2 {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 0 0 4px;
-}
+      var top = document.createElement("div");
+      top.className = "card-top";
+      var h = document.createElement("h2");
+      h.textContent = f.title;
+      var ref = document.createElement("span");
+      ref.className = "ref";
+      ref.textContent = f.ref;
+      top.appendChild(h);
+      top.appendChild(ref);
+      card.appendChild(top);
 
-.ref {
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
-}
+      var body = document.createElement("p");
+      body.textContent = f.body;
+      card.appendChild(body);
 
-.card p { margin: 0 0 8px; font-size: 13px; }
+      if (f.evidence) {
+        var ev = document.createElement("span");
+        ev.className = "evidence";
+        ev.textContent = "Matched: " + f.evidence;
+        card.appendChild(ev);
+        card.appendChild(document.createElement("br"));
+      }
 
-.evidence {
-  font-size: 11px;
-  color: var(--muted);
-  background: rgba(0,0,0,0.04);
-  border-radius: 4px;
-  padding: 2px 6px;
-  display: inline-block;
-  margin-bottom: 8px;
-  word-break: break-word;
-}
+      var btn = document.createElement("button");
+      btn.className = "dismiss";
+      btn.type = "button";
+      btn.textContent = "Done, dismiss";
+      btn.addEventListener("click", function () {
+        dismissed[f.id] = true;
+        render(findings);
+      });
+      card.appendChild(btn);
 
-.dismiss {
-  font-size: 12px;
-  color: var(--navy);
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-.dismiss:hover { background: rgba(31,56,100,0.06); }
-
-.empty {
-  color: var(--muted);
-  font-size: 13px;
-  padding: 10px 0;
-}
-
-.foot {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.loading {
-  padding: 16px;
-  color: var(--muted);
-  font-size: 13px;
-}
+      box.appendChild(card);
+    });
+  }
+})();
